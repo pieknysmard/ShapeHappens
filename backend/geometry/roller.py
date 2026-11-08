@@ -8,7 +8,7 @@ from ..imaging.segment import InputError
 
 
 SPACING = {'draft': 0.4, 'standard': 0.12, 'fine': 0.08}
-MAX_SURFACE_SAMPLES = 2_200_000
+MAX_SURFACE_SAMPLES = 2_250_000
 
 
 def sample_relief(relief, n, rows, circumference, length, smoothing):
@@ -34,7 +34,7 @@ def build(masks, s):
     warnings = []
     mismatch = float(np.mean(~np.isclose(relief[:, 0], relief[:, -1], atol=1e-6)))
     if mismatch:
-        warnings.append(f'Source seam differs on {mismatch:.0%} of rows. The mesh stays closed; enable seamless mirror tiling to make the pattern continuous.')
+        warnings.append(f'Source edge columns differ on {mismatch:.0%} of rows. This is a diagnostic only: periodic artwork can have different adjacent edge samples. Inspect repeated tiles and neighbouring gradients for a real discontinuity. Project artwork should be repaired at source; mirror tiling changes the motif arrangement.')
     if s.seamless:
         relief = np.concatenate([relief, relief[:, ::-1]], axis=1)
         warnings.append('Seamless mirror tiling repeats the source plus its horizontal reflection around the circumference.')
@@ -74,7 +74,7 @@ def build(masks, s):
     mesh = trimesh.Trimesh(vertices=vertices, faces=np.vstack(face_parts), process=False)
     warnings.append(f'Bilinear relief interpolation; maximum mesh spacing {spacing:g} mm. Surface smoothing is {s.smoothing:g} mm (Gaussian sigma). Set smoothing to 0 to retain all source texture; mesh antialias filtering still prevents downsampling noise.')
     pixel_mm = min(math.pi * s.diameter / w, length / h)
-    distance = cv2.distanceTransform((relief > 0).astype('uint8'), cv2.DIST_L2, 5)
+    distance = cv2.distanceTransform((relief > 0).astype('uint8'), cv2.DIST_L2, 5).astype(float)
     if distance.max() > 0 and np.any((distance > 0) & (distance * 2 * pixel_mm < s.min_wall)):
         warnings.append('Some pattern edges or features are below the minimum printable feature size. Inspect the preview before printing.')
     return mesh, warnings, {'diameter': s.diameter, 'length': length, 'recess_depth': s.depth,
