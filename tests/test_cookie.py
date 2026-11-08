@@ -9,7 +9,7 @@ from .samples import cookie, encoded
 
 
 def make(kind='smile', **kwargs):
-    s = Settings(**kwargs)
+    s = Settings(mode='cookie', **kwargs)
     masks, _ = segment(encoded(cookie(kind)), 'cookie', s.tolerance)
     return build(masks, s)
 

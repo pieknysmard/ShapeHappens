@@ -31,7 +31,7 @@ def test_actual_preview_matches_download(mode, kind):
 
 
 def test_invalid_has_highlight_and_no_stl():
-    response = client.post('/api/generate', files={'image': ('open.png', encoded(cookie('open')), 'image/png')})
+    response = client.post('/api/generate', files={'image': ('open.png', encoded(cookie('open')), 'image/png')}, data={'settings': '{"mode":"cookie"}'})
     assert response.status_code == 422
     assert response.json()['segmented'].startswith('data:image/png')
     assert 'stl' not in response.json()

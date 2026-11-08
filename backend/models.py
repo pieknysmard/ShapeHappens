@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class Settings(BaseModel):
-    mode: Literal['cookie', 'roller'] = 'cookie'
+    mode: Literal['cookie', 'roller'] = 'roller'
     tolerance: int = Field(30, ge=0, le=100)
     size: float = Field(80, ge=5, le=500)
     size_axis: Literal['width', 'height'] = 'width'

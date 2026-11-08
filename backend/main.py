@@ -12,8 +12,11 @@ from .models import Settings
 from .imaging.segment import InputError, segment
 from .geometry import cookie, roller
 from .geometry.validation import export_validated
+from .library import Identity, artwork_notes, archive, file_stem
+from .families import router as families_router
 
 app = FastAPI(title='ShapeHappens Generator')
+app.include_router(families_router)
 
 
 @app.get('/api/health')
@@ -22,21 +25,32 @@ def health():
 
 
 @app.post('/api/generate')
-def generate(image: UploadFile = File(...), settings: str = Form('{}')):
+def generate(image: UploadFile = File(...), settings: str = Form('{}'), identity: str = Form('{}'), save: bool = Form(False)):
     preview = None
     try:
         s = Settings.model_validate_json(settings)
+        naming = Identity.model_validate_json(identity)
         data = image.file.read(12 * 1024 * 1024 + 1)
         if len(data) > 12 * 1024 * 1024:
             raise InputError('PNG file must be no larger than 12 MB.')
         masks, preview = segment(data, s.mode, s.tolerance)
+        notes = artwork_notes(data, s, naming)
         mesh, warnings, dimensions = (cookie if s.mode == 'cookie' else roller).build(masks, s)
+        warnings = notes + warnings
         mesh, stl = export_validated(mesh)
         result = {'stl': base64.b64encode(stl).decode(), 'segmented': preview, 'warnings': warnings,
                   'stats': {'triangles': len(mesh.faces), 'bounds': mesh.bounds.tolist(),
                             'size': mesh.extents.tolist(), 'volume_mm3': mesh.volume,
                             'watertight': True, 'manifold': True, 'components': mesh.body_count,
                             'dimensions': dimensions}}
+        result['filename'] = file_stem(s, naming, dimensions, 0) + '.stl'
+        if save:
+            try:
+                result.update(archive(data, stl, s, naming, result['stats'], warnings, image.filename))
+            except OSError:
+                import logging
+                logging.exception('Local library save failed')
+                result['warnings'].append('The model was generated, but saving to the local library failed. Download the STL now and check available disk space and folder permissions.')
         if s.mode == 'roller':
             # Preview decodes these exact STL bytes. Avoid millions of decimal
             # JSON positions/colours that made high-quality meshes impractical.

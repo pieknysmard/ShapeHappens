@@ -2,8 +2,9 @@
 
 A local React / TypeScript / Three.js application backed by FastAPI, OpenCV,
 Pillow, Shapely, Trimesh and Manifold3D. Converts PNG artwork to millimetre STL
-geometry. No accounts or hosted services. Uploaded artwork stays in memory on
-the local server; generated files are downloaded directly by the browser.
+geometry. No accounts or hosted services. Processing stays on the local server;
+the UI can archive source PNG, verified STL and settings to the local library.
+Generated STLs can also be downloaded directly by the browser.
 
 ## Windows setup
 
@@ -86,7 +87,7 @@ and a **197 MB binary STL**. Meshing is vectorized for these larger models.
 The preview loads the exact binary STL instead of a duplicate JSON triangle
 array; shading is neutral to reveal actual surface geometry.
 
-The local limit is 2.2 million surface vertices. Jobs exceeding it are rejected
+The local limit is 2.25 million surface vertices. Jobs exceeding it are rejected
 with an explanation; resolution is never silently coarsened. Effective mesh
 spacing, smoothing, and source pixel dimensions in mm are displayed. Small
 features remain limited by source resolution, depth-map quality and FDM printing.
@@ -191,4 +192,25 @@ base64, a preview mode, segmented PNG, warnings and stats. Cookie results also
 include triangle positions and colours; rollers preview the exact STL bytes
 directly to avoid duplicating high-resolution geometry in decimal JSON arrays.
 Invalid inputs return HTTP 422 with an error and, where available, a highlighted
-image. `/api/health` reports server readiness. No files are persisted by the API.
+image. `/api/health` reports server readiness. The API only archives files when
+the caller explicitly supplies `save=true`, as the UI does when saving is enabled.
+
+## Roller presets and versioned files
+
+The Texture Roller tab now supports [batch roller families](docs/ROLLER_FAMILIES.md):
+separate artwork for Standard, Mini and Extended, optional solid and holed
+variants, and saved families that can be reopened and revised in the app.
+The current filename prefix is `A00001-SH` (line, five-digit family, size, body).
+Family PNG/STL/settings triplets are stored in `roller-families/`, with immutable
+revision folders. The older single-generator API and `library/` archive described
+below remain available for compatibility.
+
+Texture Roller is now the default mode. Presets: Standard 100 × Ø40 mm
+(1257 × 1000 px), Mini 70 × Ø25 mm (785 × 700 px), Extended 150 × Ø30 mm
+(942 × 1500 px). The through-hole checkbox starts off; enabling it uses an
+editable 8 mm bore.
+
+The UI initially enables saving source PNG, verified STL and settings JSON to
+`library/`, using stable pattern-number prefixes and revision folders. The API
+only persists when `save=true` is supplied. See [the workflow and compatibility
+review](docs/ROLLER_WORKFLOW.md) for naming, storage, backup and artwork guidance.

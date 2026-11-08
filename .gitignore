@@ -6,3 +6,5 @@ __pycache__/
 pytest-cache-files-*/
 *.tsbuildinfo
 test-output/
+library/
+roller-families/
